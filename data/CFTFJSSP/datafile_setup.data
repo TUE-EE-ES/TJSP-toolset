@@ -1,0 +1,19 @@
+# Data file explanation (based on Liu_EX51-4)
+
+# NR of Jobs | NR of Machines | # NR of Vehicles
+6 4 4
+
+# Each line from here concerns a job
+
+# NR of operations | (Operation 1) (Operation 2) etc.
+# (Operation 1) = (NR of options (Option 1) (Option 2) etc.)
+# (Option 1) = (Machine Processing_time)
+2 (3 (1 13) (2 12) (3 9)) (3 (1 5) (3 7) (4 9))
+
+
+# Grid size (d = diagonal travel is allowed)
+4x4d
+
+# Node locations of: Loading station | Machines | Unloading Station
+5 3 8 16 14 5
+
