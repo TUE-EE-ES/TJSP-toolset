@@ -1,6 +1,6 @@
 from library.optimization_model import *
 from enum import Enum
-
+import time
 class LogicBasedBendersDecomposition(ABC):
     def __init__(self, name, master_problem, sub_problem):
         """
@@ -36,13 +36,14 @@ class LogicBasedBendersDecomposition(ABC):
         """
         self.iterations = iterations
 
-    def solve(self, print_output):
+    def solve(self, print_output, timeout=3600*5):
         """
         Solves the LBBD procedure
         """
+        abort = False
         end_iteration = None
         self.print_output = print_output
-
+        start_time = time.time()
         # Start iterative procedure
         for iteration in range(self.iterations):
             self.iteration = iteration
@@ -84,7 +85,7 @@ class LogicBasedBendersDecomposition(ABC):
                 )
 
             # Solve master problem
-            self.master_problem.solve(print_output = print_output)
+            self.master_problem.solve(print_output = print_output, timeout = min(900, max(10, timeout - (time.time() - start_time))))
 
             # Save results (uncomment if you want to store solutions of each iteration)
             # self.master_problem.write_solution('benders/benders-new/test/', 'iteration' + str(iteration))
@@ -119,9 +120,9 @@ class LogicBasedBendersDecomposition(ABC):
                         + " ________________________________________________________"
                     )
 
-                self.sub_problem.solve(print_output)
+                self.sub_problem.solve(print_output, timeout = max(10, (timeout - (time.time() - start_time))))
             elif isinstance(self.sub_problem, LogicBasedBendersDecomposition):
-                self.sub_problem.solve(print_output)
+                self.sub_problem.solve(print_output, timeout = max(10, (timeout - (time.time() - start_time))))
 
             # Proceed algorithm for either a feasibility sub problem or optimality sub problem
             if self.sub_problem.problem_type is ProblemType.FEASIBILITY_PROBLEM:
@@ -137,8 +138,11 @@ class LogicBasedBendersDecomposition(ABC):
                 if self.master_problem_objective_value_list[iteration] < self.sub_problem_optimal_value:
                     self.__apply_cuts()
 
+            if timeout - (time.time() - start_time) < 1:
+                abort = True
+
             # Check again for completion
-            if self.__check_completion(iteration):
+            if self.__check_completion(iteration) or abort:
                 end_iteration = iteration
                 print("LBBD Complete")
                 break

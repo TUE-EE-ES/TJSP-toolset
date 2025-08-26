@@ -18,6 +18,7 @@ class ModelType(Enum):
     CFR = 5
     CFTJSSP = 6
     TFJSSP2 = 8
+    TFJSSP3 = 8
 
 
 class ModelData:
@@ -48,7 +49,7 @@ class ModelData:
             case ModelType.TFJSSP:
                 self.__read_TFJSSP(filepath + filename)
             case ModelType.TFJSSP2:
-                self.__read_TFJSSP(filepath + filename)
+                self.__read_TFJSSP2(filepath + filename)
             case ModelType.CFTFJSSP:
                 self.__read_CFTFJSSP(filepath + filename)
             case ModelType.CFTJSSP:
@@ -117,7 +118,7 @@ class ModelData:
         with (open(filename, 'r') as file):
 
             # Read job and routing network data
-            self.NR_JOBS, self.NR_MACHINES, self.NR_VEHICLES = [
+            self.NR_JOBS, self.NR_UN_MACHINES, self.NR_VEHICLES = [
                 int(v.replace("(", "").replace(")", "")) for v in file.readline().split()
             ]
             JOB_LIST = [
@@ -189,6 +190,25 @@ class ModelData:
             for i in range(len(self.MACHINE_JOBS)):
                 self.MACHINE_JOBS[i].append([0])
 
+    def __read_TFJSSP2(self, filename):
+        with (open(filename, 'r') as file):
+            self.NR_JOBS, self.NR_MACHINES, self.NR_VEHICLES = [
+                int(v.replace("(", "").replace(")", "")) for v in file.readline().split()
+            ]
+            JOB_LIST = [
+                [
+                    int(v.replace("(", "").replace(")", "")) for v in file.readline().split()
+                ] for i in range(self.NR_JOBS)]
+            self.NR_MACHINES += 1
+            self.TRANSFER_TIMES = np.array([[int(v) for v in file.readline().split()] for i in range(self.NR_MACHINES)])
+
+        self.__construct_jobs_with_load(JOB_LIST)
+
+        # if self.MODEL_TYPE == ModelType.TFJSSP2:
+        #     for i in range(len(self.MACHINE_JOBS)):
+        #         self.MACHINE_JOBS[i].append([0])
+        #
+        # pass
 
     def __read_TJSSP(self, filename):
         """
@@ -332,6 +352,56 @@ class ModelData:
             self.JOBS.append(job)
             self.MACHINE_JOBS.append(machine_job)
 
+    def __construct_jobs_with_load(self, job_list):
+        """
+        Constructs a set of jobs and alternative options based on data file
+
+        :param job_list: List of job data extracted from the TJSP data file
+        """
+
+        if not hasattr(self, 'MACHINE_LOCATIONS'):
+            print("CRASH")
+
+        self.JOBS = []
+        self.JOB_SIZES = []
+        self.MACHINE_JOBS = []
+
+        # For all jobs in data file
+        for job_line in job_list:
+            nr_steps = job_line.pop(0) # Extract number of operations
+            self.JOB_SIZES.append(nr_steps + 1) # Job size als includes travel from and to loading/unloading station
+
+            # Start creating job
+            job = []
+            job.append([(0, 0)])  # Dummy operation of duration 0 in loading station
+
+            # Store machines used by job for later use
+            machine_job = []
+            machine_job.append([0])
+
+            # For each operation
+            for stp in range(nr_steps):
+                nbc = job_line.pop(0)
+
+                choices = []
+                machine_choices = []
+
+                # For all options in each operation
+                for c in range(nbc):
+                    m = job_line.pop(0)
+                    d = job_line.pop(0)
+
+                    # Extract choice
+                    choices.append((m, d))
+                    machine_choices.append(m)
+
+                # Store choices in job list
+                job.append(choices)
+                machine_job.append(machine_choices)
+
+            # Store all information
+            self.JOBS.append(job)
+            self.MACHINE_JOBS.append(machine_job)
 
     def __construct_jobs_with_load_and_unload(self, job_list):
         """
@@ -382,24 +452,24 @@ class ModelData:
                 machine_job.append(machine_choices)
 
                 # # End with dummy operation of duration 0 in unloading station
-            try:
-                if self.MACHINE_LOCATIONS[0] == self.MACHINE_LOCATIONS[self.NR_MACHINES - 1]:
-                    # If single unloading / loading (UL) station is specified
-                    self.SINGLE_UL = True
-                    job.append([(0, 0)])
-                    machine_job.append([0])
-                else:
-                    self.SINGLE_UL = False
-
-                    # If separate loading / unloading station is specified
-                    job.append([(self.NR_MACHINES - 1, 0)])
-                    machine_job.append([self.NR_MACHINES - 1])
-
-                if self.SINGLE_UL: self.NR_MACHINES -= 1  # Load / Unload is the same station so remove redundant machine count
-
-            except:
+            # try:
+            if self.NR_MACHINES - self.NR_UN_MACHINES == 1:
+                # If single unloading / loading (UL) station is specified
+                self.SINGLE_UL = True
                 job.append([(0, 0)])
                 machine_job.append([0])
+            else:
+                self.SINGLE_UL = False
+
+                # If separate loading / unloading station is specified
+                job.append([(self.NR_MACHINES - 1, 0)])
+                machine_job.append([self.NR_MACHINES - 1])
+
+            # if self.SINGLE_UL: self.NR_MACHINES -= 1  # Load / Unload is the same station so remove redundant machine count
+
+            # except:
+            #     job.append([(0, 0)])
+            #     machine_job.append([0])
 
 
             # Store all information

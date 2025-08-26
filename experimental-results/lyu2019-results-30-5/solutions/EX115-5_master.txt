@@ -1,0 +1,7 @@
+-------------------------------------------------------------------------------
+Model constraints: 2156715, variables: integer: 0, interval: 464, sequence: 12
+Solve status: Unknown
+Search status: SearchStopped, stop cause: SearchStoppedByLimit
+Solve time: 32.37 sec
+-------------------------------------------------------------------------------
+No solution data

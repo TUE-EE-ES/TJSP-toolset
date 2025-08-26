@@ -1,0 +1,7 @@
+-------------------------------------------------------------------------------
+Model constraints: 2812, variables: integer: 0, interval: 202, sequence: 8
+Solve status: Unknown
+Search status: SearchStopped, stop cause: SearchStoppedByLimit
+Solve time: 10.39 sec
+-------------------------------------------------------------------------------
+No solution data

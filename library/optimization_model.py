@@ -4,6 +4,7 @@ import sys
 import cplex
 from docplex.cp.model import *
 from docplex.mp.model import *
+import docplex.cp.parameters as params
 from .model_data import *
 from dataclasses import dataclass
 import docplex.mp.conflict_refiner as cr
@@ -56,7 +57,7 @@ class OptimizationModel(ABC):
         pass
 
     @abstractmethod
-    def solve(self, print_output):
+    def solve(self, print_output, timeout=900):
         pass
 
     def print_figure(self):
@@ -91,7 +92,9 @@ class MIPOptimizationModel(OptimizationModel, ABC):
         self.decision_vars = MIPDecisionVariables
         self.cgroup = cr.ConstraintsGroup(1)
 
-    def solve(self, print_output):
+    def solve(self, print_output, timeout=900):
+        self.model.set_time_limit(timeout)
+
         self.res = self.model.solve(log_output=print_output)
         if print_output:
             self.model.print_information()
@@ -103,7 +106,7 @@ class MIPOptimizationModel(OptimizationModel, ABC):
         cref = cr.ConflictRefiner()
         print('Conflict refining')
 
-        self.crefres = cref.refine_conflict(self.model, display=print_output)  # display flag is to show the conflicts
+        self.crefres = cref.refine_conflict(self.model, display=False)  # display flag is to show the conflicts
         self.model.set_time_limit(1000000000000000000000000000000000000000000000000000000)
 
         # if print_output:
@@ -289,12 +292,13 @@ class CPOptimizationModel(OptimizationModel, ABC):
                 case _:
                     raise TypeError('invalid decision variable: ' + key)
 
-    def solve(self, print_output):
+    def solve(self, print_output, timeout=900):
         # Solve model
         if print_output:
-            self.solver = CpoSolver(self.model, LogVerbosity='Verbose')# TimeLimit=1800)#, Workers=8)
+            self.solver = CpoSolver(self.model, LogVerbosity='Verbose', TimeLimit=timeout)#, Workers = 1)#, execfile='/Applications/CPLEX_Studio2211/cpoptimizer/bin/arm64_osx/cpoptimizer')# TimeLimit=1800)#, Workers=8)
         else:
-            self.solver = CpoSolver(self.model, LogVerbosity='Quiet')#, TimeLimit=1800)#, Workers=1)
+            # params.set_TimeLimit(60)
+            self.solver = CpoSolver(self.model, LogVerbosity='Quiet', TimeLimit=timeout)#, Workers = 1)#, execfile='/Applications/CPLEX_Studio2211/cpoptimizer/bin/arm64_osx/cpoptimizer')#, TimeLimit=1800)#, Workers=1)
 
         print('Solving model...')
         self.res = self.solver.solve()  # execfile='/opt/ibm/ILOG/CPLEX_Studio2211/cpoptimizer/bin/x86-64_linux/cpoptimizer')

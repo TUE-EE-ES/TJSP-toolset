@@ -86,12 +86,15 @@ class TFMSBenchmark(ABC):
                 model.setup_model()
 
             if isinstance(model, LogicBasedBendersDecomposition):
-                model.set_iterations(1000)
+                model.set_iterations(10000)
 
             try:
                 model.solve(False)
             except:
-                print("Failed after " + str(start) + " seconds")
+                end = time.time()
+                length = end - start
+
+                print("Failed after " + str(length) + " seconds")
 
             # Calculate the end time and time taken
             end = time.time()
@@ -111,6 +114,7 @@ class TFMSBenchmark(ABC):
                     result_data[i].append('GRID SIZE')
 
                 result_data[i].append('COMPUTATION TIME')
+                result_data[i].append('ITERATIONS')
                 result_data[i].append('SOLVE STATUS')
                 result_data[i].append('OBJECTIVE')
 
@@ -127,7 +131,7 @@ class TFMSBenchmark(ABC):
                 result_data[i+1].append(str(model_data.NR_ROWS) + 'x' + str(model_data.NR_COLS))
 
             result_data[i+1].append(length)
-
+            result_data[i+1].append(model.iteration)
             # Check objective
             # if model.problem_type == ProblemType.OPTIMIZATION_PROBLEM:
 
